@@ -21,14 +21,14 @@ func main() {
 
 		cmd := parseCmd()
 
-		switch cmdName, args := cmd[0], cmd[1:]; cmdName {
-		case "echo":
-			handleEcho(args)
-		case "exit":
-			handleExit(args)
-		default:
+		cmdName, args := cmd[0], cmd[1:]
+		handler, ok := getBuiltIns()[cmdName]
+		if !ok {
 			fmt.Printf("%s: command not found\n", cmdName)
+			continue
 		}
+
+		handler(args)
 	}
 }
 
@@ -107,6 +107,25 @@ func handleExit(args []string) {
 
 func handleEcho(args []string) {
 	fmt.Println(strings.Join(args, " "))
+}
+
+func handleType(args []string) {
+	cmdName := args[0]
+	_, ok := getBuiltIns()[cmdName]
+	if !ok {
+		fmt.Printf("%s: not found\n", cmdName)
+		return
+	}
+
+	fmt.Printf("%s is a shell builtin\n", cmdName)
+}
+
+func getBuiltIns() map[string]func([]string) {
+	return map[string]func([]string){
+		"exit": handleExit,
+		"echo": handleEcho,
+		"type": handleType,
+	}
 }
 
 // isWhiteSpace returns true if the given character is a white space(' ', '\t', '\r')
