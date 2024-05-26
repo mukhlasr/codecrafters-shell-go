@@ -107,7 +107,6 @@ func handleExit(args []string) {
 
 func handleEcho(args []string) {
 	fmt.Println(strings.Join(args, " "))
-	os.Exit(0)
 }
 
 // isWhiteSpace returns true if the given character is a white space(' ', '\t', '\r')
