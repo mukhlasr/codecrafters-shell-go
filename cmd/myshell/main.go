@@ -19,61 +19,99 @@ func main() {
 	for {
 		fmt.Fprint(os.Stdout, "$ ")
 
-		// Wait for user input
-		str, err := bufio.NewReader(os.Stdin).ReadString('\n')
+		cmd := parseCmd()
+
+		switch cmdName, args := cmd[0], cmd[1:]; cmdName {
+		case "echo":
+			handleEcho(args)
+		case "exit":
+			handleExit(args)
+		default:
+			fmt.Printf("%s: command not found\n", cmdName)
+		}
+	}
+}
+
+func parseCmd() []string {
+	r := bufio.NewReader(os.Stdin)
+
+	var (
+		res           []string
+		onDoubleQuote bool
+		onWhitespace  bool
+		str           string
+	)
+
+loop:
+	for {
+		c, err := r.ReadByte()
 		if errors.Is(err, io.EOF) {
-			break
+			os.Exit(0)
 		}
 
 		if err != nil {
-			log.Fatal(err)
-			break
+			log.Fatalln(err)
 		}
 
-		cmd := parseCmd(str[:len(str)-1])
+		if isWhiteSpace(c) {
+			if onDoubleQuote {
+				str += string(c)
+				continue
+			}
 
-		switch cmd.name {
-		case "exit":
-			handleExit(cmd)
+			if onWhitespace {
+				continue
+			}
+
+			res = append(res, str)
+			str = ""
+			continue
+		}
+
+		onWhitespace = false
+
+		switch c {
+		case '"':
+			onDoubleQuote = !onDoubleQuote
+		case '\n':
+			if onDoubleQuote {
+				str += string(c)
+				fmt.Print("> ")
+				continue
+			}
+
+			res = append(res, str)
+			break loop
 		default:
-			fmt.Printf("%s: command not found\n", cmd.name)
+			str += string(c)
 		}
 	}
+
+	return res
 }
 
-type cmd struct {
-	name string
-	args []string
-}
-
-func parseCmd(str string) cmd {
-	// Split the string into words
-	words := strings.Fields(str)
-
-	// The first word is the command name
-	name := words[0]
-
-	// The rest of the words are the arguments
-	args := words[1:]
-
-	return cmd{name, args}
-}
-
-func handleExit(cmd cmd) {
-	if cmd.name != "exit" {
-		return
-	}
-
+func handleExit(args []string) {
 	code := 0
 
-	if len(cmd.args) == 1 {
+	if len(args) > 0 {
 		var err error
-		code, err = strconv.Atoi(cmd.args[0])
+		code, err = strconv.Atoi(args[0])
 		if err != nil {
-			fmt.Printf("exit: %s: numeric argument required\n", cmd.args[0])
+			fmt.Printf("exit: %s: numeric argument required\n", args[0])
 			code = 255
 		}
 	}
 
 	os.Exit(code)
+}
+
+func handleEcho(args []string) {
+	fmt.Println(strings.Join(args, " "))
+	os.Exit(0)
+}
+
+// isWhiteSpace returns true if the given character is a white space(' ', '\t', '\r')
+// \n is not considered as a white space.
+func isWhiteSpace(c byte) bool {
+	return c == ' ' || c == '\t' || c == '\r'
 }
