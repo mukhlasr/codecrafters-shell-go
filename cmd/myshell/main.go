@@ -7,8 +7,13 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
+)
+
+var (
+	lastExitCode int
 )
 
 func main() {
@@ -27,7 +32,7 @@ func main() {
 		builtinName, builtinArgs := cmd[0], cmd[1:]
 		builtinFunc, ok := getBuiltIns()[builtinName]
 		if !ok {
-			execute(cmd)
+			lastExitCode = execute(cmd)
 			continue
 		}
 
@@ -129,7 +134,7 @@ func handleType(args []string) {
 	fmt.Printf("%s is %s\n", cmdName, path)
 }
 
-func execute(cmd []string) {
+func execute(cmd []string) (exitCode int) {
 	if len(cmd) < 1 {
 		return
 	}
@@ -141,7 +146,26 @@ func execute(cmd []string) {
 		return
 	}
 
-	log.Println("execute", path, cmd)
+	execCmd := exec.Command(path, cmd[1:]...)
+	execCmd.Stdin = os.Stdin
+	execCmd.Stdout = os.Stdout
+	execCmd.Stderr = os.Stderr
+
+	err := execCmd.Run()
+
+	var execErr *exec.ExitError
+
+	if errors.As(err, &execErr) {
+		code := execErr.ExitCode()
+		return code
+	}
+
+	if err != nil {
+		fmt.Println(err)
+		return 1
+	}
+
+	return
 }
 
 // isCmdExists returns value is the path of the command and return true if exists.
