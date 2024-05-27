@@ -138,6 +138,7 @@ func execute(cmd []string) {
 
 	if !exist {
 		fmt.Printf("%s: command not found\n", cmd[0])
+		return
 	}
 
 	log.Println("execute", path, cmd)
