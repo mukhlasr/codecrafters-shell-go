@@ -174,6 +174,15 @@ func isCmdExists(cmd string) (string, bool) {
 	path := os.Getenv("PATH")
 	paths := strings.Split(path, ":")
 
+	if cmd[0] == '/' {
+		_, err := os.Stat(cmd)
+		if err == nil {
+			return cmd, true
+		}
+
+		return "", false
+	}
+
 	for _, p := range paths {
 		cmdPath := fmt.Sprintf("%s/%s", p, cmd)
 		_, err := os.Stat(cmdPath)
