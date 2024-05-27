@@ -20,15 +20,18 @@ func main() {
 		fmt.Fprint(os.Stdout, "$ ")
 
 		cmd := parseCmd()
-
-		cmdName, args := cmd[0], cmd[1:]
-		handler, ok := getBuiltIns()[cmdName]
-		if !ok {
-			fmt.Printf("%s: command not found\n", cmdName)
+		if len(cmd) < 1 {
 			continue
 		}
 
-		handler(args)
+		builtinName, builtinArgs := cmd[0], cmd[1:]
+		builtinFunc, ok := getBuiltIns()[builtinName]
+		if !ok {
+			execute(cmd)
+			continue
+		}
+
+		builtinFunc(builtinArgs)
 	}
 }
 
@@ -112,12 +115,49 @@ func handleEcho(args []string) {
 func handleType(args []string) {
 	cmdName := args[0]
 	_, ok := getBuiltIns()[cmdName]
+	if ok {
+		fmt.Printf("%s is a shell builtin\n", cmdName)
+		return
+	}
+
+	path, ok := isCmdExists(cmdName)
 	if !ok {
 		fmt.Printf("%s: not found\n", cmdName)
 		return
 	}
 
-	fmt.Printf("%s is a shell builtin\n", cmdName)
+	fmt.Printf("%s is %s\n", cmdName, path)
+}
+
+func execute(cmd []string) {
+	if len(cmd) < 1 {
+		return
+	}
+
+	path, exist := isCmdExists(cmd[0])
+
+	if !exist {
+		fmt.Printf("%s: command not found\n", cmd[0])
+	}
+
+	log.Println("execute", path, cmd)
+}
+
+// isCmdExists returns value is the path of the command and return true if exists.
+// If the command does not exist, it returns false.
+func isCmdExists(cmd string) (string, bool) {
+	path := os.Getenv("PATH")
+	paths := strings.Split(path, ":")
+
+	for _, p := range paths {
+		cmdPath := fmt.Sprintf("%s/%s", p, cmd)
+		_, err := os.Stat(cmdPath)
+		if err == nil {
+			return cmdPath, true
+		}
+	}
+
+	return "", false
 }
 
 func getBuiltIns() map[string]func([]string) {
